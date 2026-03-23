@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solana Token Delegator</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Solana Token Delegator</h1>
+      <div id="wallet-section">
+        <button id="connect-btn">Connect Wallet</button>
+        <span id="wallet-addr"></span>
+      </div>
+    </header>
+
+    <main id="main" class="hidden">
+      <!-- Network selector -->
+      <div class="field">
+        <label for="network">Network</label>
+        <select id="network">
+          <option value="mainnet-beta">Mainnet</option>
+          <option value="devnet">Devnet</option>
+        </select>
+      </div>
+
+      <!-- Token accounts -->
+      <div class="field">
+        <label for="token-select">Token Account</label>
+        <select id="token-select">
+          <option value="">-- connect wallet first --</option>
+        </select>
+        <span id="token-info" class="sub"></span>
+      </div>
+
+      <!-- Delegate address -->
+      <div class="field">
+        <label for="delegate-addr">Delegate Address</label>
+        <input id="delegate-addr" type="text" placeholder="Pubkey of the delegate" />
+      </div>
+
+      <!-- Amount -->
+      <div class="field">
+        <label for="amount">Amount to Approve</label>
+        <input id="amount" type="number" placeholder="Max tokens delegate can spend" min="0" step="any" />
+      </div>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button id="approve-btn" class="primary">Approve Delegate</button>
+        <button id="revoke-btn" class="danger">Revoke Delegate</button>
+      </div>
+
+      <!-- Current delegation info -->
+      <div id="delegation-info" class="info-box hidden">
+        <h3>Current Delegation</h3>
+        <p>Delegate: <span id="current-delegate">—</span></p>
+        <p>Approved Amount: <span id="current-amount">—</span></p>
+      </div>
+
+      <!-- Status -->
+      <div id="status" class="hidden"></div>
+    </main>
+
+    <footer>
+      <p>Connect Phantom or Solflare to delegate SPL tokens.</p>
+    </footer>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
