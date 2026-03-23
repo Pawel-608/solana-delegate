@@ -77,12 +77,14 @@ function hideStatus() {
   statusEl.classList.add("hidden");
 }
 
+const HELIUS_KEY = "04909b63-2f46-4559-943f-706616fb46f6";
+
 function getConnection() {
   const cluster = networkSel.value;
   const rpc =
     cluster === "mainnet-beta"
-      ? "https://api.mainnet-beta.solana.com"
-      : clusterApiUrl(cluster);
+      ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_KEY}`
+      : `https://devnet.helius-rpc.com/?api-key=${HELIUS_KEY}`;
   return new Connection(rpc, "confirmed");
 }
 
