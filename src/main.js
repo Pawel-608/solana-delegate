@@ -192,16 +192,20 @@ async function loadTokenAccounts() {
     tokenAccounts = allAccounts
       .map((item) => {
         const info = item.account.data.parsed.info;
-        const programId = item.account.owner.equals(TOKEN_2022_PROGRAM_ID)
-          ? TOKEN_2022_PROGRAM_ID
-          : TOKEN_PROGRAM_ID;
+        const ownerStr = item.account.owner.toString();
+        const programId =
+          ownerStr === TOKEN_2022_PROGRAM_ID.toString()
+            ? TOKEN_2022_PROGRAM_ID
+            : TOKEN_PROGRAM_ID;
+        const delAmt = info.delegatedAmount;
         return {
           address: item.pubkey,
           mint: info.mint,
           balance: info.tokenAmount.uiAmount,
           decimals: info.tokenAmount.decimals,
           delegate: info.delegate || null,
-          delegatedAmount: info.delegatedAmount?.uiAmount || 0,
+          delegatedAmount:
+            typeof delAmt === "object" ? delAmt?.uiAmount || 0 : Number(delAmt) || 0,
           programId,
         };
       })
