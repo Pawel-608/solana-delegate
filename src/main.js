@@ -51,7 +51,7 @@ const WALLETS = [
   {
     name: "Solflare",
     icon: "https://raw.githubusercontent.com/nickhow/web3-icons/refs/heads/main/src/icons/solflare.svg",
-    getProvider: () => window.solflare?.isSolflare ? window.solflare : null,
+    getProvider: () => window.solflare ? window.solflare : null,
     url: "https://solflare.com",
   },
   {
@@ -126,7 +126,7 @@ async function connectWallet(w) {
   try {
     const resp = await provider.connect();
     activeProvider = provider;
-    wallet = resp.publicKey;
+    wallet = resp?.publicKey || provider.publicKey;
     connectBtn.textContent = "Disconnect";
     connectBtn.classList.add("connected");
     walletAddr.textContent = short(wallet);
