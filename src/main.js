@@ -8,6 +8,7 @@ import {
 } from "@solana/web3.js";
 import {
   TOKEN_PROGRAM_ID,
+  TOKEN_2022_PROGRAM_ID,
   createApproveInstruction,
   createRevokeInstruction,
   getAccount,
@@ -174,13 +175,23 @@ async function loadTokenAccounts() {
   showStatus("Loading token accounts...");
 
   try {
-    const resp = await connection.getParsedTokenAccountsByOwner(wallet, {
-      programId: TOKEN_PROGRAM_ID,
-    });
+    const [legacyResp, token2022Resp] = await Promise.all([
+      connection.getParsedTokenAccountsByOwner(wallet, {
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      connection.getParsedTokenAccountsByOwner(wallet, {
+        programId: TOKEN_2022_PROGRAM_ID,
+      }),
+    ]);
 
-    tokenAccounts = resp.value
+    const allAccounts = [...legacyResp.value, ...token2022Resp.value];
+
+    tokenAccounts = allAccounts
       .map((item) => {
         const info = item.account.data.parsed.info;
+        const programId = item.account.owner.equals(TOKEN_2022_PROGRAM_ID)
+          ? TOKEN_2022_PROGRAM_ID
+          : TOKEN_PROGRAM_ID;
         return {
           address: item.pubkey,
           mint: info.mint,
@@ -188,6 +199,7 @@ async function loadTokenAccounts() {
           decimals: info.tokenAmount.decimals,
           delegate: info.delegate || null,
           delegatedAmount: info.delegatedAmount?.uiAmount || 0,
+          programId,
         };
       })
       .filter((t) => t.balance > 0)
@@ -279,7 +291,9 @@ approveBtn.addEventListener("click", async () => {
       t.address,
       delegatePubkey,
       wallet,
-      rawAmount
+      rawAmount,
+      [],
+      t.programId
     );
 
     const tx = new Transaction().add(ix);
@@ -317,7 +331,7 @@ revokeBtn.addEventListener("click", async () => {
 
   try {
     connection = getConnection();
-    const ix = createRevokeInstruction(t.address, wallet);
+    const ix = createRevokeInstruction(t.address, wallet, [], t.programId);
 
     const tx = new Transaction().add(ix);
     tx.feePayer = wallet;
