@@ -36,6 +36,9 @@ const delegationInfo = document.getElementById("delegation-info");
 const currentDelegate = document.getElementById("current-delegate");
 const currentAmount = document.getElementById("current-amount");
 const statusEl = document.getElementById("status");
+const delegationsSection = document.getElementById("delegations-section");
+const delegationsList = document.getElementById("delegations-list");
+const noDelegations = document.getElementById("no-delegations");
 const walletModal = document.getElementById("wallet-modal");
 const walletList = document.getElementById("wallet-list");
 const modalClose = document.getElementById("modal-close");
@@ -222,6 +225,7 @@ async function loadTokenAccounts() {
 
     hideStatus();
     updateDelegationInfo();
+    renderDelegationsList();
   } catch (err) {
     showStatus("Failed to load accounts: " + err.message, "error");
   }
@@ -249,6 +253,63 @@ function updateDelegationInfo() {
     delegationInfo.classList.remove("hidden");
     currentDelegate.textContent = "None";
     currentAmount.textContent = "—";
+  }
+}
+
+// --- Delegations list ---
+function renderDelegationsList() {
+  const delegated = tokenAccounts.filter((t) => t.delegate);
+  delegationsSection.classList.remove("hidden");
+  delegationsList.innerHTML = "";
+
+  if (delegated.length === 0) {
+    noDelegations.classList.remove("hidden");
+    return;
+  }
+
+  noDelegations.classList.add("hidden");
+
+  delegated.forEach((t) => {
+    const row = document.createElement("div");
+    row.className = "delegation-row";
+    row.innerHTML = `
+      <div class="del-header">
+        <span class="del-mint">${short(t.mint)}</span>
+        <button class="revoke-btn">Revoke</button>
+      </div>
+      <div class="del-details">
+        <div>Delegate: <span>${short(t.delegate)}</span></div>
+        <div>Approved: <span>${t.delegatedAmount}</span> / Balance: <span>${t.balance}</span></div>
+        <div>Mint: <span>${t.mint}</span></div>
+      </div>
+    `;
+
+    row.querySelector(".revoke-btn").addEventListener("click", () => revokeByAccount(t));
+    delegationsList.appendChild(row);
+  });
+}
+
+async function revokeByAccount(t) {
+  showStatus(`Revoking delegate on ${short(t.mint)}...`);
+
+  try {
+    connection = getConnection();
+    const ix = createRevokeInstruction(t.address, wallet, [], t.programId);
+
+    const tx = new Transaction().add(ix);
+    tx.feePayer = wallet;
+    tx.recentBlockhash = (
+      await connection.getLatestBlockhash()
+    ).blockhash;
+
+    const signed = await activeProvider.signTransaction(tx);
+    const sig = await connection.sendRawTransaction(signed.serialize());
+    await connection.confirmTransaction(sig, "confirmed");
+
+    showStatus(`Revoked! Tx: ${sig}`, "success");
+    await loadTokenAccounts();
+  } catch (err) {
+    showStatus("Revoke failed: " + err.message, "error");
   }
 }
 

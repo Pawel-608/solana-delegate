@@ -53,11 +53,18 @@
         <button id="revoke-btn" class="danger">Revoke Delegate</button>
       </div>
 
-      <!-- Current delegation info -->
+      <!-- Current delegation info for selected token -->
       <div id="delegation-info" class="info-box hidden">
         <h3>Current Delegation</h3>
-        <p>Delegate: <span id="current-delegate">—</span></p>
-        <p>Approved Amount: <span id="current-amount">—</span></p>
+        <p>Delegate: <span id="current-delegate">--</span></p>
+        <p>Approved Amount: <span id="current-amount">--</span></p>
+      </div>
+
+      <!-- All active delegations -->
+      <div id="delegations-section" class="hidden">
+        <h2 class="section-title">Active Delegations</h2>
+        <p id="no-delegations" class="sub hidden">No active delegations found.</p>
+        <div id="delegations-list"></div>
       </div>
 
       <!-- Status -->

@@ -196,6 +196,71 @@ select {
   color: #9945ff;
 }
 
+/* Delegations list */
+.section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#delegations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delegation-row {
+  background: #12121c;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.delegation-row .del-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.delegation-row .del-mint {
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: #9945ff;
+}
+
+.delegation-row .del-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: #aaa;
+}
+
+.delegation-row .del-details span {
+  color: #14f195;
+}
+
+.delegation-row .revoke-btn {
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  background: transparent;
+  border: 1px solid #ff4c4c;
+  color: #ff4c4c;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.delegation-row .revoke-btn:hover {
+  background: rgba(255, 76, 76, 0.1);
+}
+
 .hidden {
   display: none !important;
 }
