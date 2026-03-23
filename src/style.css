@@ -261,6 +261,63 @@ select {
   background: rgba(255, 76, 76, 0.1);
 }
 
+.secondary {
+  background: #1a1a2e;
+  border: 1px solid #9945ff;
+  color: #9945ff;
+}
+.secondary:hover {
+  background: rgba(153, 69, 255, 0.1);
+}
+
+#delegate-transfer-section {
+  margin-top: 8px;
+  padding-top: 24px;
+  border-top: 1px solid #2a2a3a;
+}
+
+#incoming-delegations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.incoming-row {
+  background: #12121c;
+  border: 1px solid #2a2a3a;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.incoming-row:hover {
+  border-color: #9945ff;
+}
+
+.incoming-row .inc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: #aaa;
+}
+
+.incoming-row .inc-info span {
+  color: #14f195;
+}
+
+.incoming-row .inc-badge {
+  font-size: 0.7rem;
+  color: #9945ff;
+  text-transform: uppercase;
+}
+
 .hidden {
   display: none !important;
 }

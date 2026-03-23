@@ -60,11 +60,38 @@
         <p>Approved Amount: <span id="current-amount">--</span></p>
       </div>
 
-      <!-- All active delegations -->
+      <!-- All active delegations (as owner) -->
       <div id="delegations-section" class="hidden">
-        <h2 class="section-title">Active Delegations</h2>
+        <h2 class="section-title">Active Delegations (as Owner)</h2>
         <p id="no-delegations" class="sub hidden">No active delegations found.</p>
         <div id="delegations-list"></div>
+      </div>
+
+      <!-- Transfer as Delegate -->
+      <div id="delegate-transfer-section">
+        <h2 class="section-title">Transfer as Delegate</h2>
+        <p class="sub" style="margin-bottom:12px">Pull tokens from accounts that delegated to your connected wallet.</p>
+        <div class="field">
+          <label for="source-owner">Source Owner Address</label>
+          <input id="source-owner" type="text" placeholder="Owner wallet that delegated to you" />
+        </div>
+        <div class="field">
+          <label for="source-mint">Token Mint</label>
+          <input id="source-mint" type="text" placeholder="Mint address of the token" />
+        </div>
+        <div class="field">
+          <label for="transfer-amount">Amount to Transfer</label>
+          <input id="transfer-amount" type="number" placeholder="Amount to pull" min="0" step="any" />
+        </div>
+        <div class="field">
+          <label for="dest-addr">Destination Address</label>
+          <input id="dest-addr" type="text" placeholder="Recipient wallet (defaults to your wallet)" />
+        </div>
+        <button id="lookup-btn" class="secondary" style="margin-bottom:8px">Lookup Delegations to Me</button>
+        <div id="incoming-delegations"></div>
+        <div class="actions" style="margin-top:12px">
+          <button id="delegate-transfer-btn" class="primary">Transfer as Delegate</button>
+        </div>
       </div>
 
       <!-- Status -->

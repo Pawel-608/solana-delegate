@@ -11,8 +11,12 @@ import {
   TOKEN_2022_PROGRAM_ID,
   createApproveInstruction,
   createRevokeInstruction,
+  createTransferCheckedInstruction,
+  getAssociatedTokenAddressSync,
+  createAssociatedTokenAccountInstruction,
   getAccount,
   getMint,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
 // --- State ---
@@ -412,5 +416,205 @@ revokeBtn.addEventListener("click", async () => {
     await loadTokenAccounts();
   } catch (err) {
     showStatus("Revoke failed: " + err.message, "error");
+  }
+});
+
+// --- Transfer as Delegate ---
+const sourceOwnerInput = document.getElementById("source-owner");
+const sourceMintInput = document.getElementById("source-mint");
+const transferAmountInput = document.getElementById("transfer-amount");
+const destAddrInput = document.getElementById("dest-addr");
+const lookupBtn = document.getElementById("lookup-btn");
+const incomingDelegations = document.getElementById("incoming-delegations");
+const delegateTransferBtn = document.getElementById("delegate-transfer-btn");
+
+// Lookup all token accounts that have delegated to the connected wallet
+lookupBtn.addEventListener("click", async () => {
+  if (!wallet) {
+    showStatus("Connect wallet first.", "error");
+    return;
+  }
+
+  connection = getConnection();
+  showStatus("Searching for delegations to your wallet...");
+  incomingDelegations.innerHTML = "";
+
+  try {
+    // Use getProgramAccounts with delegate filter for both programs
+    const delegateBase58 = wallet.toBase58();
+    const results = [];
+
+    for (const programId of [TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID]) {
+      const accounts = await connection.getParsedProgramAccounts(programId, {
+        filters: [
+          { dataSize: programId.equals(TOKEN_PROGRAM_ID) ? 165 : undefined },
+          {
+            memcmp: {
+              offset: 76,
+              bytes: delegateBase58,
+            },
+          },
+        ].filter((f) => f.dataSize !== undefined || f.memcmp),
+      });
+
+      for (const acc of accounts) {
+        const info = acc.account.data.parsed?.info;
+        if (!info) continue;
+        results.push({
+          address: acc.pubkey,
+          owner: info.owner,
+          mint: info.mint,
+          delegate: info.delegate,
+          delegatedAmount:
+            typeof info.delegatedAmount === "object"
+              ? info.delegatedAmount?.uiAmount || 0
+              : Number(info.delegatedAmount) || 0,
+          decimals: info.tokenAmount?.decimals || 0,
+          balance: info.tokenAmount?.uiAmount || 0,
+          programId,
+        });
+      }
+    }
+
+    if (results.length === 0) {
+      incomingDelegations.innerHTML =
+        '<p class="sub">No accounts have delegated to your wallet.</p>';
+      hideStatus();
+      return;
+    }
+
+    results.forEach((r) => {
+      const row = document.createElement("div");
+      row.className = "incoming-row";
+      row.innerHTML = `
+        <div class="inc-info">
+          <div>Owner: <span>${short(r.owner)}</span></div>
+          <div>Mint: <span>${short(r.mint)}</span></div>
+          <div>Approved: <span>${r.delegatedAmount}</span> / Balance: <span>${r.balance}</span></div>
+        </div>
+        <span class="inc-badge">Select</span>
+      `;
+      row.addEventListener("click", () => {
+        sourceOwnerInput.value = r.owner;
+        sourceMintInput.value = r.mint;
+        transferAmountInput.value = r.delegatedAmount;
+        showStatus(`Selected: ${r.delegatedAmount} of ${short(r.mint)} from ${short(r.owner)}`, "success");
+      });
+      incomingDelegations.appendChild(row);
+    });
+
+    showStatus(`Found ${results.length} delegation(s) to your wallet.`, "success");
+  } catch (err) {
+    showStatus("Lookup failed: " + err.message, "error");
+  }
+});
+
+// Execute transfer as delegate
+delegateTransferBtn.addEventListener("click", async () => {
+  if (!wallet) {
+    showStatus("Connect wallet first.", "error");
+    return;
+  }
+
+  const sourceOwner = sourceOwnerInput.value.trim();
+  const mintAddr = sourceMintInput.value.trim();
+  const amount = parseFloat(transferAmountInput.value);
+  const destAddr = destAddrInput.value.trim() || wallet.toBase58();
+
+  if (!sourceOwner || !mintAddr) {
+    showStatus("Enter source owner and mint address.", "error");
+    return;
+  }
+  if (isNaN(amount) || amount <= 0) {
+    showStatus("Enter a valid amount.", "error");
+    return;
+  }
+
+  let sourceOwnerPk, mintPk, destPk;
+  try {
+    sourceOwnerPk = new PublicKey(sourceOwner);
+    mintPk = new PublicKey(mintAddr);
+    destPk = new PublicKey(destAddr);
+  } catch {
+    showStatus("Invalid address.", "error");
+    return;
+  }
+
+  showStatus("Preparing delegate transfer...");
+
+  try {
+    connection = getConnection();
+
+    // Determine which program the mint belongs to
+    const mintAccountInfo = await connection.getAccountInfo(mintPk);
+    const mintProgramId = mintAccountInfo.owner.equals(TOKEN_2022_PROGRAM_ID)
+      ? TOKEN_2022_PROGRAM_ID
+      : TOKEN_PROGRAM_ID;
+
+    // Get mint info for decimals
+    const mintInfo = await getMint(connection, mintPk, "confirmed", mintProgramId);
+    const decimals = mintInfo.decimals;
+    const rawAmount = BigInt(Math.floor(amount * 10 ** decimals));
+
+    // Source token account (owner's ATA)
+    const sourceAta = getAssociatedTokenAddressSync(
+      mintPk,
+      sourceOwnerPk,
+      true,
+      mintProgramId,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    // Destination token account (recipient's ATA)
+    const destAta = getAssociatedTokenAddressSync(
+      mintPk,
+      destPk,
+      true,
+      mintProgramId,
+      ASSOCIATED_TOKEN_PROGRAM_ID
+    );
+
+    const tx = new Transaction();
+
+    // Create destination ATA if it doesn't exist
+    const destAtaInfo = await connection.getAccountInfo(destAta);
+    if (!destAtaInfo) {
+      tx.add(
+        createAssociatedTokenAccountInstruction(
+          wallet,
+          destAta,
+          destPk,
+          mintPk,
+          mintProgramId,
+          ASSOCIATED_TOKEN_PROGRAM_ID
+        )
+      );
+    }
+
+    // Transfer as delegate
+    tx.add(
+      createTransferCheckedInstruction(
+        sourceAta,
+        mintPk,
+        destAta,
+        wallet, // delegate is the signer
+        rawAmount,
+        decimals,
+        [],
+        mintProgramId
+      )
+    );
+
+    tx.feePayer = wallet;
+    tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+    const signed = await activeProvider.signTransaction(tx);
+    const sig = await connection.sendRawTransaction(signed.serialize());
+    await connection.confirmTransaction(sig, "confirmed");
+
+    showStatus(`Transfer complete! Tx: ${sig}`, "success");
+    await loadTokenAccounts();
+  } catch (err) {
+    showStatus("Transfer failed: " + err.message, "error");
   }
 });
