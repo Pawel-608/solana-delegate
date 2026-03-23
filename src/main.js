@@ -17,6 +17,7 @@ import {
 
 // --- State ---
 let wallet = null;
+let activeProvider = null;
 let connection = null;
 let tokenAccounts = [];
 
@@ -35,14 +36,32 @@ const delegationInfo = document.getElementById("delegation-info");
 const currentDelegate = document.getElementById("current-delegate");
 const currentAmount = document.getElementById("current-amount");
 const statusEl = document.getElementById("status");
+const walletModal = document.getElementById("wallet-modal");
+const walletList = document.getElementById("wallet-list");
+const modalClose = document.getElementById("modal-close");
+const modalBackdrop = walletModal.querySelector(".modal-backdrop");
 
-// --- Helpers ---
-function getProvider() {
-  if (window.phantom?.solana?.isPhantom) return window.phantom.solana;
-  if (window.solflare?.isSolflare) return window.solflare;
-  if (window.solana) return window.solana;
-  return null;
-}
+// --- Wallet registry ---
+const WALLETS = [
+  {
+    name: "Phantom",
+    icon: "https://raw.githubusercontent.com/nickhow/web3-icons/refs/heads/main/src/icons/phantom.svg",
+    getProvider: () => window.phantom?.solana?.isPhantom ? window.phantom.solana : null,
+    url: "https://phantom.app",
+  },
+  {
+    name: "Solflare",
+    icon: "https://raw.githubusercontent.com/nickhow/web3-icons/refs/heads/main/src/icons/solflare.svg",
+    getProvider: () => window.solflare?.isSolflare ? window.solflare : null,
+    url: "https://solflare.com",
+  },
+  {
+    name: "Backpack",
+    icon: "https://raw.githubusercontent.com/nickhow/web3-icons/refs/heads/main/src/icons/backpack.svg",
+    getProvider: () => window.backpack?.isBackpack ? window.backpack : null,
+    url: "https://backpack.app",
+  },
+];
 
 function short(addr) {
   const s = addr.toString();
@@ -68,36 +87,77 @@ function getConnection() {
   return new Connection(rpc, "confirmed");
 }
 
-// --- Wallet ---
-connectBtn.addEventListener("click", async () => {
-  const provider = getProvider();
-  if (!provider) {
-    showStatus("No Solana wallet found. Install Phantom or Solflare.", "error");
-    return;
-  }
+// --- Wallet modal ---
+function openModal() {
+  walletList.innerHTML = "";
+  WALLETS.forEach((w) => {
+    const btn = document.createElement("button");
+    btn.className = "wallet-option";
+    const provider = w.getProvider();
+    if (!provider) btn.classList.add("not-installed");
 
-  try {
-    if (wallet) {
-      await provider.disconnect();
-      wallet = null;
-      connectBtn.textContent = "Connect Wallet";
-      connectBtn.classList.remove("connected");
-      walletAddr.textContent = "";
-      mainEl.classList.add("hidden");
-      hideStatus();
-      return;
+    btn.innerHTML = `
+      <img src="${w.icon}" alt="${w.name}" />
+      <span class="wallet-name">${w.name}</span>
+      <span class="wallet-badge">${provider ? "Detected" : "Not installed"}</span>
+    `;
+
+    if (provider) {
+      btn.addEventListener("click", () => connectWallet(w));
+    } else {
+      btn.addEventListener("click", () => window.open(w.url, "_blank"));
     }
 
+    walletList.appendChild(btn);
+  });
+  walletModal.classList.remove("hidden");
+}
+
+function closeModal() {
+  walletModal.classList.add("hidden");
+}
+
+modalClose.addEventListener("click", closeModal);
+modalBackdrop.addEventListener("click", closeModal);
+
+async function connectWallet(w) {
+  const provider = w.getProvider();
+  if (!provider) return;
+
+  try {
     const resp = await provider.connect();
+    activeProvider = provider;
     wallet = resp.publicKey;
     connectBtn.textContent = "Disconnect";
     connectBtn.classList.add("connected");
     walletAddr.textContent = short(wallet);
     mainEl.classList.remove("hidden");
+    closeModal();
     hideStatus();
     await loadTokenAccounts();
   } catch (err) {
     showStatus("Connection rejected: " + err.message, "error");
+  }
+}
+
+async function disconnectWallet() {
+  if (activeProvider) {
+    try { await activeProvider.disconnect(); } catch {}
+  }
+  activeProvider = null;
+  wallet = null;
+  connectBtn.textContent = "Connect Wallet";
+  connectBtn.classList.remove("connected");
+  walletAddr.textContent = "";
+  mainEl.classList.add("hidden");
+  hideStatus();
+}
+
+connectBtn.addEventListener("click", () => {
+  if (wallet) {
+    disconnectWallet();
+  } else {
+    openModal();
   }
 });
 
@@ -227,8 +287,7 @@ approveBtn.addEventListener("click", async () => {
       await connection.getLatestBlockhash()
     ).blockhash;
 
-    const provider = getProvider();
-    const signed = await provider.signTransaction(tx);
+    const signed = await activeProvider.signTransaction(tx);
     const sig = await connection.sendRawTransaction(signed.serialize());
     await connection.confirmTransaction(sig, "confirmed");
 
@@ -265,8 +324,7 @@ revokeBtn.addEventListener("click", async () => {
       await connection.getLatestBlockhash()
     ).blockhash;
 
-    const provider = getProvider();
-    const signed = await provider.signTransaction(tx);
+    const signed = await activeProvider.signTransaction(tx);
     const sig = await connection.sendRawTransaction(signed.serialize());
     await connection.confirmTransaction(sig, "confirmed");
 

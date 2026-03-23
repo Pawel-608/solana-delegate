@@ -65,8 +65,18 @@
     </main>
 
     <footer>
-      <p>Connect Phantom or Solflare to delegate SPL tokens.</p>
+      <p>Connect your Solana wallet to delegate SPL tokens.</p>
     </footer>
+
+    <!-- Wallet picker modal -->
+    <div id="wallet-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <h2>Connect Wallet</h2>
+        <div id="wallet-list"></div>
+        <button id="modal-close" class="modal-close-btn">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="/src/main.js"></script>
